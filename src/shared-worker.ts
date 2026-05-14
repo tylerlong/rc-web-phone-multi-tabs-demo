@@ -2,13 +2,13 @@ const ports = new Set<MessagePort>();
 
 type RequestMessage = {
 	id: string;
-	type: "ping" | "broadcast" | "disconnect";
+	type: "message" | "disconnect";
 	text?: string;
 };
 
 type ResponseMessage = {
 	id: string;
-	type: "pong" | "broadcast";
+	type: "message";
 	text: string;
 };
 
@@ -38,20 +38,12 @@ worker.onconnect = (event: MessageEvent) => {
 			return;
 		}
 
-		if (data.type === "broadcast") {
-			for (const client of ports) {
-				send(client, {
-					type: "broadcast",
-					text: data.text ?? "",
-				});
-			}
-			return;
+		for (const client of ports) {
+			send(client, {
+				type: "message",
+				text: data.text ?? "",
+			});
 		}
-
-		send(port, {
-			type: "pong",
-			text: `worker received: ${data.text ?? ""}`,
-		});
 	};
 
 	port.start();

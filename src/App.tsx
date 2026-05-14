@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type RequestMessage = {
 	id: string;
-	type: "ping" | "broadcast" | "disconnect";
+	type: "message" | "disconnect";
 	text?: string;
 };
 
 type ResponseMessage = {
 	id: string;
-	type: "pong" | "broadcast";
+	type: "message";
 	text: string;
 };
 
@@ -47,15 +47,10 @@ export default function App() {
 				...prev,
 				{
 					id: data.id,
-					text: `from worker [${data.type}] ${data.text}`,
+					text: `from worker ${data.text}`,
 				},
 			]);
 		};
-
-		postMessage({
-			type: "ping",
-			text: "hello from app",
-		});
 
 		return () => {
 			postMessage({
@@ -66,26 +61,23 @@ export default function App() {
 		};
 	}, [postMessage]);
 
-	const send = (type: "ping" | "broadcast") => {
-		const text = `${type} ${new Date().toISOString()}`;
+	const send = () => {
+		const text = new Date().toISOString();
 		const message = postMessage({
-			type,
+			type: "message",
 			text,
 		});
 		setMessages((prev) => [
 			...prev,
-			{ id: message.id, text: `to worker [${type}] ${text}` },
+			{ id: message.id, text: `to worker ${text}` },
 		]);
 	};
 
 	return (
 		<div>
 			<h1>SharedWorker demo</h1>
-			<button onClick={() => send("ping")} type="button">
-				Send Ping (reply to this tab only)
-			</button>
-			<button onClick={() => send("broadcast")} type="button">
-				Send Broadcast (all tabs)
+			<button onClick={send} type="button">
+				Send Message
 			</button>
 			<ul>
 				{messages.map((message) => (
