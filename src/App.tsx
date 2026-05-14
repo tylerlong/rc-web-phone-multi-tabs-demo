@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 type RequestMessage = {
 	type: "ping" | "broadcast" | "disconnect";
-	tabId: string;
 	text?: string;
 };
 
 type ResponseMessage = {
 	type: "connected" | "pong" | "broadcast" | "error";
-	tabId: string;
 	text: string;
 };
 
@@ -19,7 +17,6 @@ type MessageItem = {
 
 export default function App() {
 	const [messages, setMessages] = useState<MessageItem[]>([]);
-	const tabId = useRef(crypto.randomUUID());
 	const portRef = useRef<MessagePort | null>(null);
 
 	useEffect(() => {
@@ -37,21 +34,19 @@ export default function App() {
 				...prev,
 				{
 					id: crypto.randomUUID(),
-					text: `from worker [${data.type}] (${data.tabId}) ${data.text}`,
+					text: `from worker [${data.type}] ${data.text}`,
 				},
 			]);
 		};
 
 		port.postMessage({
 			type: "ping",
-			tabId: tabId.current,
 			text: "hello from app",
 		} satisfies RequestMessage);
 
 		return () => {
 			port.postMessage({
 				type: "disconnect",
-				tabId: tabId.current,
 			} satisfies RequestMessage);
 			port.close();
 			portRef.current = null;
@@ -66,7 +61,6 @@ export default function App() {
 		]);
 		portRef.current?.postMessage({
 			type,
-			tabId: tabId.current,
 			text,
 		} satisfies RequestMessage);
 	};
@@ -74,7 +68,6 @@ export default function App() {
 	return (
 		<div>
 			<h1>SharedWorker demo</h1>
-			<p>tabId: {tabId.current}</p>
 			<button onClick={() => send("ping")} type="button">
 				Send Ping (reply to this tab only)
 			</button>

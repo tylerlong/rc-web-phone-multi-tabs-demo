@@ -2,13 +2,11 @@ const ports = new Set<MessagePort>();
 
 type RequestMessage = {
 	type: "ping" | "broadcast" | "disconnect";
-	tabId: string;
 	text?: string;
 };
 
 type ResponseMessage = {
 	type: "connected" | "pong" | "broadcast" | "error";
-	tabId: string;
 	text: string;
 };
 
@@ -29,8 +27,8 @@ worker.onconnect = (event: MessageEvent) => {
 	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
 		const data = messageEvent.data;
 
-		if (!data?.tabId || !data.type) {
-			send(port, { type: "error", tabId: "unknown", text: "invalid request" });
+		if (!data?.type) {
+			send(port, { type: "error", text: "invalid request" });
 			return;
 		}
 
@@ -44,7 +42,6 @@ worker.onconnect = (event: MessageEvent) => {
 			for (const client of ports) {
 				send(client, {
 					type: "broadcast",
-					tabId: data.tabId,
 					text: data.text ?? "",
 				});
 			}
@@ -53,7 +50,6 @@ worker.onconnect = (event: MessageEvent) => {
 
 		send(port, {
 			type: "pong",
-			tabId: data.tabId,
 			text: `worker received: ${data.text ?? ""}`,
 		});
 	};
@@ -61,11 +57,10 @@ worker.onconnect = (event: MessageEvent) => {
 	port.onmessageerror = () => {
 		send(port, {
 			type: "error",
-			tabId: "unknown",
 			text: "message parse error",
 		});
 	};
 
 	port.start();
-	send(port, { type: "connected", tabId: "worker", text: "worker connected" });
+	send(port, { type: "connected", text: "worker connected" });
 };
