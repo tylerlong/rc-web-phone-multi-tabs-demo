@@ -8,7 +8,7 @@ type RequestMessage = {
 
 type ResponseMessage = {
 	id: string;
-	type: "connected" | "pong" | "broadcast" | "error";
+	type: "connected" | "pong" | "broadcast";
 	text: string;
 };
 
@@ -32,11 +32,6 @@ worker.onconnect = (event: MessageEvent) => {
 	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
 		const data = messageEvent.data;
 
-		if (!data?.type) {
-			send(port, { type: "error", text: "invalid request" });
-			return;
-		}
-
 		if (data.type === "disconnect") {
 			ports.delete(port);
 			port.close();
@@ -56,13 +51,6 @@ worker.onconnect = (event: MessageEvent) => {
 		send(port, {
 			type: "pong",
 			text: `worker received: ${data.text ?? ""}`,
-		});
-	};
-
-	port.onmessageerror = () => {
-		send(port, {
-			type: "error",
-			text: "message parse error",
 		});
 	};
 

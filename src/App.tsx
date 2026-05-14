@@ -8,7 +8,7 @@ type RequestMessage = {
 
 type ResponseMessage = {
 	id: string;
-	type: "connected" | "pong" | "broadcast" | "error";
+	type: "connected" | "pong" | "broadcast";
 	text: string;
 };
 
