@@ -16,3 +16,4 @@ dist
 
 # TypeScript incremental build info
 *.tsbuildinfo
+.pnpm-store
