@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type RequestMessage = {
+	id: string;
 	type: "ping" | "broadcast" | "disconnect";
 	text?: string;
 };
 
 type ResponseMessage = {
+	id: string;
 	type: "connected" | "pong" | "broadcast" | "error";
 	text: string;
 };
@@ -15,9 +17,20 @@ type MessageItem = {
 	text: string;
 };
 
+type OutboundMessage = Omit<RequestMessage, "id">;
+
 export default function App() {
 	const [messages, setMessages] = useState<MessageItem[]>([]);
 	const portRef = useRef<MessagePort | null>(null);
+
+	const postMessage = useCallback((payload: OutboundMessage) => {
+		const message = {
+			...payload,
+			id: crypto.randomUUID(),
+		} satisfies RequestMessage;
+		portRef.current?.postMessage(message);
+		return message;
+	}, []);
 
 	useEffect(() => {
 		const worker = new SharedWorker(
@@ -33,36 +46,36 @@ export default function App() {
 			setMessages((prev) => [
 				...prev,
 				{
-					id: crypto.randomUUID(),
+					id: data.id,
 					text: `from worker [${data.type}] ${data.text}`,
 				},
 			]);
 		};
 
-		port.postMessage({
+		postMessage({
 			type: "ping",
 			text: "hello from app",
-		} satisfies RequestMessage);
+		});
 
 		return () => {
-			port.postMessage({
+			postMessage({
 				type: "disconnect",
-			} satisfies RequestMessage);
+			});
 			port.close();
 			portRef.current = null;
 		};
-	}, []);
+	}, [postMessage]);
 
 	const send = (type: "ping" | "broadcast") => {
 		const text = `${type} ${new Date().toISOString()}`;
-		setMessages((prev) => [
-			...prev,
-			{ id: crypto.randomUUID(), text: `to worker [${type}] ${text}` },
-		]);
-		portRef.current?.postMessage({
+		const message = postMessage({
 			type,
 			text,
-		} satisfies RequestMessage);
+		});
+		setMessages((prev) => [
+			...prev,
+			{ id: message.id, text: `to worker [${type}] ${text}` },
+		]);
 	};
 
 	return (

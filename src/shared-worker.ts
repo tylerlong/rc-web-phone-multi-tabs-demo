@@ -1,11 +1,13 @@
 const ports = new Set<MessagePort>();
 
 type RequestMessage = {
+	id: string;
 	type: "ping" | "broadcast" | "disconnect";
 	text?: string;
 };
 
 type ResponseMessage = {
+	id: string;
 	type: "connected" | "pong" | "broadcast" | "error";
 	text: string;
 };
@@ -20,8 +22,11 @@ worker.onconnect = (event: MessageEvent) => {
 
 	ports.add(port);
 
-	const send = (target: MessagePort, payload: ResponseMessage) => {
-		target.postMessage(payload);
+	const send = (target: MessagePort, payload: Omit<ResponseMessage, "id">) => {
+		target.postMessage({
+			...payload,
+			id: crypto.randomUUID(),
+		} satisfies ResponseMessage);
 	};
 
 	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
