@@ -29,7 +29,7 @@ worker.onconnect = (event: MessageEvent) => {
 	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
 		const data = messageEvent.data;
 
-		if (!data || !data.tabId || !data.type) {
+		if (!data?.tabId || !data.type) {
 			send(port, { type: "error", tabId: "unknown", text: "invalid request" });
 			return;
 		}
@@ -59,7 +59,11 @@ worker.onconnect = (event: MessageEvent) => {
 	};
 
 	port.onmessageerror = () => {
-		send(port, { type: "error", tabId: "unknown", text: "message parse error" });
+		send(port, {
+			type: "error",
+			tabId: "unknown",
+			text: "message parse error",
+		});
 	};
 
 	port.start();
