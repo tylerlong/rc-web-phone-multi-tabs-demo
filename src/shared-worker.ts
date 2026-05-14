@@ -8,7 +8,7 @@ type RequestMessage = {
 
 type ResponseMessage = {
 	id: string;
-	type: "connected" | "pong" | "broadcast";
+	type: "pong" | "broadcast";
 	text: string;
 };
 
@@ -55,5 +55,4 @@ worker.onconnect = (event: MessageEvent) => {
 	};
 
 	port.start();
-	send(port, { type: "connected", text: "worker connected" });
 };
