@@ -1,15 +1,12 @@
+import { DefaultSipClient } from "ringcentral-web-phone/sip-client";
+import type OutboundMessage from "ringcentral-web-phone/sip-message/outbound/index";
+
 const ports = new Set<MessagePort>();
 
 type RequestMessage = {
 	id: string;
 	type: "message" | "disconnect";
 	text?: string;
-};
-
-type ResponseMessage = {
-	id: string;
-	type: "message";
-	text: string;
 };
 
 const worker = self as unknown as {
@@ -22,13 +19,6 @@ worker.onconnect = (event: MessageEvent) => {
 
 	ports.add(port);
 
-	const send = (target: MessagePort, payload: Omit<ResponseMessage, "id">) => {
-		target.postMessage({
-			...payload,
-			id: crypto.randomUUID(),
-		} satisfies ResponseMessage);
-	};
-
 	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
 		const data = messageEvent.data;
 
@@ -38,13 +28,22 @@ worker.onconnect = (event: MessageEvent) => {
 			return;
 		}
 
-		for (const client of ports) {
-			send(client, {
-				type: "message",
-				text: data.text ?? "",
-			});
-		}
+		// forward browser tabs messages to SIP server
+		console.log("Sent SIP message:", data);
+		sipClient.send(data as unknown as OutboundMessage, false);
 	};
 
 	port.start();
 };
+
+const sipClient = new DefaultSipClient({
+	sipInfo: JSON.parse(import.meta.env.VITE_SIP_INFO),
+});
+sipClient.on("inboundMessage", (message) => {
+	console.log("Received SIP message:", message);
+	// forward SIP server messages to browser tabs
+	for (const client of ports) {
+		client.postMessage(message);
+	}
+});
+sipClient.start();
