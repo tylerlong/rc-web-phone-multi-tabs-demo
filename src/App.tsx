@@ -42,6 +42,7 @@ class MySipClient extends EventEmitter implements SipClient {
 	}
 	public async dispose() {
 		if (this.port === null) return;
+		this.port.postMessage({ type: "disconnect" });
 		this.port.removeEventListener("message", this.handleMessage);
 		this.port.close();
 		this.port = null;

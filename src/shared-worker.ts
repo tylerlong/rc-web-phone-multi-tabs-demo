@@ -29,7 +29,7 @@ worker.onconnect = (event: MessageEvent) => {
 		}
 
 		// forward browser tabs messages to SIP server
-		console.log("Sent SIP message:", data);
+		console.log("forward browser tabs messages to SIP server:", data);
 		sipClient.send(data as unknown as OutboundMessage, false);
 	};
 
@@ -40,7 +40,7 @@ const sipClient = new DefaultSipClient({
 	sipInfo: JSON.parse(import.meta.env.VITE_SIP_INFO),
 });
 sipClient.on("inboundMessage", (message) => {
-	console.log("Received SIP message:", message);
+	console.log("forward SIP server messages to browser tabs:", message);
 	// forward SIP server messages to browser tabs
 	for (const client of ports) {
 		client.postMessage(message);
