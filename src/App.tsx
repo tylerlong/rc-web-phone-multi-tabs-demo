@@ -7,10 +7,13 @@ import type RequestMessage from "ringcentral-web-phone/sip-message/outbound/requ
 import type ResponseMessage from "ringcentral-web-phone/sip-message/outbound/response";
 import type { SipClient } from "ringcentral-web-phone/types";
 
+const cseqId = (message: { headers: Record<string, string> }) =>
+	message.headers.CSeq.trim().split(/\s+/)[0];
+
 class MySipClient extends EventEmitter implements SipClient {
 	private port: MessagePort | null = null;
-	public async start() {
-		if (this.port !== null) return;
+	async start() {
+		if (this.port) return;
 		const worker = new SharedWorker(
 			new URL("./shared-worker.ts", import.meta.url),
 			{ type: "module" },
@@ -19,38 +22,32 @@ class MySipClient extends EventEmitter implements SipClient {
 		this.port.start();
 		this.port.addEventListener("message", this.handleMessage);
 	}
-	public async request(message: RequestMessage): Promise<InboundMessage> {
+	async request(message: RequestMessage): Promise<InboundMessage> {
 		this.port?.postMessage(message.toString());
 		return new Promise<InboundMessage>((resolve) => {
-			const messageListerner = (inboundMessage: InboundMessage) => {
-				if (
-					inboundMessage.headers.CSeq.trim().split(/\s+/)[0] !==
-					message.headers.CSeq.trim().split(/\s+/)[0]
-				) {
+			const messageListener = (inboundMessage: InboundMessage) => {
+				if (cseqId(inboundMessage) !== cseqId(message)) return;
+				if (inboundMessage.subject.startsWith("SIP/2.0 100 ")) {
 					return;
 				}
-				if (inboundMessage.subject.startsWith("SIP/2.0 100 ")) {
-					return; // ignore
-				}
-				this.off("inboundMessage", messageListerner);
+				this.off("inboundMessage", messageListener);
 				resolve(inboundMessage);
 			};
-			this.on("inboundMessage", messageListerner);
+			this.on("inboundMessage", messageListener);
 		});
 	}
-	public async reply(message: ResponseMessage) {
+	async reply(message: ResponseMessage) {
 		this.port?.postMessage(message.toString());
 	}
-	public async dispose() {
-		if (this.port === null) return;
+	async dispose() {
+		if (!this.port) return;
 		this.port.postMessage({ type: "disconnect" });
 		this.port.removeEventListener("message", this.handleMessage);
 		this.port.close();
 		this.port = null;
 	}
-	private handleMessage = (event: MessageEvent): void => {
+	private handleMessage = (event: MessageEvent) => {
 		this.emit("inboundMessage", event.data as InboundMessage);
-		console.log("tab received SIP message:", event);
 	};
 }
 
@@ -78,14 +75,14 @@ export default function App() {
 		};
 	}, []);
 
+	const phoneNumberToCall = phoneNumber.trim();
 	const handleCall = () => {
-		const number = phoneNumber.trim();
-		if (number === "") return;
-		webPhone.call(number);
+		if (!phoneNumberToCall) return;
+		webPhone.call(phoneNumberToCall);
 	};
 
 	const handleAnswer = async () => {
-		if (inboundCall === null) return;
+		if (!inboundCall) return;
 		await inboundCall.answer();
 		setInboundCall(null);
 	};
@@ -100,11 +97,7 @@ export default function App() {
 				value={phoneNumber}
 				onChange={(event) => setPhoneNumber(event.target.value)}
 			/>
-			<button
-				type="button"
-				onClick={handleCall}
-				disabled={phoneNumber.trim() === ""}
-			>
+			<button type="button" onClick={handleCall} disabled={!phoneNumberToCall}>
 				Call
 			</button>
 			{inboundCall && (

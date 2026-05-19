@@ -3,11 +3,7 @@ import type OutboundMessage from "ringcentral-web-phone/sip-message/outbound/ind
 
 const ports = new Set<MessagePort>();
 
-type RequestMessage = {
-	id: string;
-	type: "message" | "disconnect";
-	text?: string;
-};
+type PortMessage = string | { type: "disconnect" };
 
 const worker = self as unknown as {
 	onconnect: ((event: MessageEvent) => void) | null;
@@ -19,18 +15,16 @@ worker.onconnect = (event: MessageEvent) => {
 
 	ports.add(port);
 
-	port.onmessage = (messageEvent: MessageEvent<RequestMessage>) => {
+	port.onmessage = (messageEvent: MessageEvent<PortMessage>) => {
 		const data = messageEvent.data;
 
-		if (data.type === "disconnect") {
+		if (typeof data !== "string" && data.type === "disconnect") {
 			ports.delete(port);
 			port.close();
 			return;
 		}
 
-		// forward browser tabs messages to SIP server
-		console.log("forward browser tabs messages to SIP server:", data);
-		sipClient.send(data as unknown as OutboundMessage, false);
+		sipClient.send(data as unknown as OutboundMessage);
 	};
 
 	port.start();
@@ -40,8 +34,6 @@ const sipClient = new DefaultSipClient({
 	sipInfo: JSON.parse(import.meta.env.VITE_SIP_INFO),
 });
 sipClient.on("inboundMessage", (message) => {
-	console.log("forward SIP server messages to browser tabs:", message);
-	// forward SIP server messages to browser tabs
 	for (const client of ports) {
 		client.postMessage(message);
 	}
