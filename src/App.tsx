@@ -88,23 +88,53 @@ export default function App() {
 	};
 
 	return (
-		<div>
-			<h1>SharedWorker demo</h1>
-			<label htmlFor="phone-number">Phone number</label>
-			<input
-				id="phone-number"
-				type="tel"
-				value={phoneNumber}
-				onChange={(event) => setPhoneNumber(event.target.value)}
-			/>
-			<button type="button" onClick={handleCall} disabled={!phoneNumberToCall}>
-				Call
-			</button>
-			{inboundCall && (
-				<button type="button" onClick={handleAnswer}>
-					Answer
-				</button>
-			)}
+		<div className="min-h-screen bg-zinc-50 px-6 py-12 text-zinc-950">
+			<div className="mx-auto max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+				<div className="space-y-1">
+					<h1 className="font-semibold text-2xl">SharedWorker demo</h1>
+					<p className="text-sm text-zinc-600">
+						Place calls from multiple browser tabs through one SIP connection.
+					</p>
+				</div>
+
+				<div className="mt-8 space-y-5">
+					<div className="space-y-2">
+						<label
+							className="block font-medium text-sm text-zinc-700"
+							htmlFor="phone-number"
+						>
+							Phone number
+						</label>
+						<input
+							className="w-full rounded-md border border-zinc-300 px-3 py-2 text-base outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+							id="phone-number"
+							type="tel"
+							value={phoneNumber}
+							onChange={(event) => setPhoneNumber(event.target.value)}
+						/>
+					</div>
+
+					<div className="flex flex-wrap gap-3">
+						<button
+							className="rounded-md bg-emerald-600 px-4 py-2 font-medium text-sm text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+							type="button"
+							onClick={handleCall}
+							disabled={!phoneNumberToCall}
+						>
+							Call
+						</button>
+						{inboundCall && (
+							<button
+								className="rounded-md border border-emerald-600 px-4 py-2 font-medium text-emerald-700 text-sm transition hover:bg-emerald-50"
+								type="button"
+								onClick={handleAnswer}
+							>
+								Answer
+							</button>
+						)}
+					</div>
+				</div>
+			</div>
 		</div>
 	);
 }
