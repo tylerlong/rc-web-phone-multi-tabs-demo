@@ -66,17 +66,6 @@ pnpm dev
 
 Open the app in more than one browser tab. Each tab should connect to the same shared worker.
 
-Build for production:
-
-```sh
-pnpm build
-```
-
-Run formatting and lint checks:
-
-```sh
-pnpm check
-```
 
 ## Important Files
 
@@ -86,4 +75,3 @@ pnpm check
 - `src/index.css`: Tailwind CSS import.
 - `.env.example`: required SIP environment variable shape.
 - `vite.config.ts`: Vite, React, and Tailwind setup.
-
