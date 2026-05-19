@@ -2,11 +2,5 @@
 	"$schema": "https://biomejs.dev/schemas/latest/schema.json",
 	"files": {
 		"includes": ["**", "!node_modules", "!.pnpm-store", "!dist"]
-	},
-	"formatter": {
-		"enabled": true
-	},
-	"linter": {
-		"enabled": true
 	}
 }
