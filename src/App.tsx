@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import WebPhone from "ringcentral-web-phone";
+import type InboundCallSession from "ringcentral-web-phone/call-session/inbound";
 import EventEmitter from "ringcentral-web-phone/event-emitter";
 import type InboundMessage from "ringcentral-web-phone/sip-message/inbound";
 import type RequestMessage from "ringcentral-web-phone/sip-message/outbound/request";
@@ -60,10 +61,19 @@ const webPhone = new WebPhone({
 
 export default function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
+	const [inboundCall, setInboundCall] = useState<InboundCallSession | null>(
+		null,
+	);
 
 	useEffect(() => {
+		const handleInboundCall = (callSession: InboundCallSession) => {
+			setInboundCall(callSession);
+		};
+
+		webPhone.on("inboundCall", handleInboundCall);
 		webPhone.start();
 		return () => {
+			webPhone.off("inboundCall", handleInboundCall);
 			webPhone.dispose();
 		};
 	}, []);
@@ -72,6 +82,12 @@ export default function App() {
 		const number = phoneNumber.trim();
 		if (number === "") return;
 		webPhone.call(number);
+	};
+
+	const handleAnswer = async () => {
+		if (inboundCall === null) return;
+		await inboundCall.answer();
+		setInboundCall(null);
 	};
 
 	return (
@@ -91,6 +107,11 @@ export default function App() {
 			>
 				Call
 			</button>
+			{inboundCall && (
+				<button type="button" onClick={handleAnswer}>
+					Answer
+				</button>
+			)}
 		</div>
 	);
 }
