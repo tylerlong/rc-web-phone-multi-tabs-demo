@@ -7,18 +7,19 @@
 		"dev": "vite",
 		"build": "tsc --noEmit && vite build",
 		"preview": "vite preview",
-		"lint": "biome check . --write --unsafe"
+		"check": "biome check . --write --unsafe",
+		"upgrade": "pnpm update --latest"
 	},
 	"dependencies": {
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
-		"ringcentral-web-phone": "^2.4.3"
+		"ringcentral-web-phone": "^2.4.4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.15",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^6.0.1",
+		"@vitejs/plugin-react": "^6.0.2",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.13"
 	}

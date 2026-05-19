@@ -15,8 +15,8 @@ importers:
         specifier: ^19.2.6
         version: 19.2.6(react@19.2.6)
       ringcentral-web-phone:
-        specifier: ^2.4.3
-        version: 2.4.3
+        specifier: ^2.4.4
+        version: 2.4.4
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.15
@@ -28,8 +28,8 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
-        specifier: ^6.0.1
-        version: 6.0.1(vite@8.0.13)
+        specifier: ^6.0.2
+        version: 6.0.2(vite@8.0.13)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -212,9 +212,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rolldown/pluginutils@1.0.0-rc.7':
-    resolution: {integrity: sha512-qujRfC8sFVInYSPPMLQByRh7zhwkGFS4+tyMQ83srV1qrxL4g8E2tyxVVyxd0+8QeBM1mIk9KbWxkegRr76XzA==}
-
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
@@ -229,8 +226,8 @@ packages:
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
 
-  '@vitejs/plugin-react@6.0.1':
-    resolution: {integrity: sha512-l9X/E3cDb+xY3SWzlG1MOGt2usfEHGMNIaegaUGFsLkb3RCn/k8/TOXBcab+OndDI4TBtktT8/9BwwW8Vi9KUQ==}
+  '@vitejs/plugin-react@6.0.2':
+    resolution: {integrity: sha512-DlSMqo4WhThw4vB8Mpn0Woe9J+Jfq1geJ61AKW0QEgLzGMNwtIMdxbDUzLxcun8W7NbJO0e2Jg/Nxm3cCSVzzg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@rolldown/plugin-babel': ^0.1.7 || ^0.2.0
@@ -376,8 +373,8 @@ packages:
     resolution: {integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==}
     engines: {node: '>=0.10.0'}
 
-  ringcentral-web-phone@2.4.3:
-    resolution: {integrity: sha512-Va2VoJ4p8wXHBsNWyjliio/wxzfl2TAMn+pTVFwj3l4FZB4DeyJtuUNFTxlTe9OtdgtyLZdg+JxmG92X9K772A==}
+  ringcentral-web-phone@2.4.4:
+    resolution: {integrity: sha512-/kYYoPw5rlIHYYI1KJcaG56FJd0Lmg1GkHjbndjpNjsmwzvU2mnqzjQ3ro+0ghn4QFomlURXHU8uoEsrB1gYpg==}
 
   rolldown@1.0.1:
     resolution: {integrity: sha512-X0KQHljNnEkWNqqiz9zJrGunh1B0HgOxLXvnFpCOcadzcy5qohZ3tqMEUg00vncoRovXuK3ZqCT9KnnKzoInFQ==}
@@ -570,8 +567,6 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.0.1':
     optional: true
 
-  '@rolldown/pluginutils@1.0.0-rc.7': {}
-
   '@rolldown/pluginutils@1.0.1': {}
 
   '@tybys/wasm-util@0.10.2':
@@ -587,9 +582,9 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
-  '@vitejs/plugin-react@6.0.1(vite@8.0.13)':
+  '@vitejs/plugin-react@6.0.2(vite@8.0.13)':
     dependencies:
-      '@rolldown/pluginutils': 1.0.0-rc.7
+      '@rolldown/pluginutils': 1.0.1
       vite: 8.0.13
 
   blueimp-md5@2.19.0: {}
@@ -688,7 +683,7 @@ snapshots:
 
   react@19.2.6: {}
 
-  ringcentral-web-phone@2.4.3:
+  ringcentral-web-phone@2.4.4:
     dependencies:
       blueimp-md5: 2.19.0
       fast-xml-parser: 5.8.0
