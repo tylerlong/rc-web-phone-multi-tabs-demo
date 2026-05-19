@@ -1,5 +1,5 @@
 import { DefaultSipClient } from "ringcentral-web-phone/sip-client";
-import type OutboundMessage from "ringcentral-web-phone/sip-message/outbound/index";
+import OutboundMessage from "ringcentral-web-phone/sip-message/outbound/index";
 
 const ports = new Set<MessagePort>();
 
@@ -30,7 +30,10 @@ worker.onconnect = (event: MessageEvent) => {
 
 		// forward browser tabs messages to SIP server
 		console.log("forward browser tabs messages to SIP server:", data);
-		sipClient.send(data as unknown as OutboundMessage, false);
+		sipClient.send(
+			OutboundMessage.fromString(data as unknown as string),
+			false,
+		);
 	};
 
 	port.start();

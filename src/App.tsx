@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import WebPhone from "ringcentral-web-phone";
 import EventEmitter from "ringcentral-web-phone/event-emitter";
 import type InboundMessage from "ringcentral-web-phone/sip-message/inbound";
@@ -19,7 +19,7 @@ class MySipClient extends EventEmitter implements SipClient {
 		this.port.addEventListener("message", this.handleMessage);
 	}
 	public async request(message: RequestMessage): Promise<InboundMessage> {
-		this.port?.postMessage(message);
+		this.port?.postMessage(message.toString());
 		return new Promise<InboundMessage>((resolve) => {
 			const messageListerner = (inboundMessage: InboundMessage) => {
 				if (
@@ -38,7 +38,7 @@ class MySipClient extends EventEmitter implements SipClient {
 		});
 	}
 	public async reply(message: ResponseMessage) {
-		this.port?.postMessage(message);
+		this.port?.postMessage(message.toString());
 	}
 	public async dispose() {
 		if (this.port === null) return;
@@ -59,15 +59,38 @@ const webPhone = new WebPhone({
 });
 
 export default function App() {
+	const [phoneNumber, setPhoneNumber] = useState("");
+
 	useEffect(() => {
 		webPhone.start();
 		return () => {
 			webPhone.dispose();
 		};
 	}, []);
+
+	const handleCall = () => {
+		const number = phoneNumber.trim();
+		if (number === "") return;
+		webPhone.call(number);
+	};
+
 	return (
 		<div>
 			<h1>SharedWorker demo</h1>
+			<label htmlFor="phone-number">Phone number</label>
+			<input
+				id="phone-number"
+				type="tel"
+				value={phoneNumber}
+				onChange={(event) => setPhoneNumber(event.target.value)}
+			/>
+			<button
+				type="button"
+				onClick={handleCall}
+				disabled={phoneNumber.trim() === ""}
+			>
+				Call
+			</button>
 		</div>
 	);
 }
