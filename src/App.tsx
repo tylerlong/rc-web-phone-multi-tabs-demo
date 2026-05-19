@@ -108,7 +108,7 @@ export default function App() {
 					/>
 				</div>
 
-				<div className="mt-5 flex gap-3">
+				<div className="mt-5">
 					<button
 						className="rounded-md bg-emerald-600 px-4 py-2 font-medium text-sm text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
 						type="button"
@@ -117,7 +117,13 @@ export default function App() {
 					>
 						Call
 					</button>
-					{inboundCall && (
+				</div>
+
+				{inboundCall && (
+					<div className="mt-8 border-zinc-200 border-t pt-5">
+						<p className="mb-3 font-medium text-sm text-zinc-700">
+							Incoming call
+						</p>
 						<button
 							className="rounded-md border border-emerald-600 px-4 py-2 font-medium text-emerald-700 text-sm hover:bg-emerald-50"
 							type="button"
@@ -125,8 +131,8 @@ export default function App() {
 						>
 							Answer
 						</button>
-					)}
-				</div>
+					</div>
+				)}
 			</section>
 		</main>
 	);
