@@ -60,7 +60,7 @@ One tab can own multiple calls because many `Call-Id` values can point to the sa
 
 A tab claims a call when it starts an outbound call, answers an inbound call, or declines an inbound call. The tab sends `associateCallId` to the worker. The worker stores that owner and sends `callClaimed` to the other tabs so they can remove their duplicate local call session.
 
-Ownership is released when the call session is disposed. If a tab disconnects, the worker removes every `Call-Id` owned by that tab.
+Ownership is released when the call session is disposed. The tab also sends a best-effort `disconnect` message on `pagehide` for tab close, reload, or non-bfcache navigation. When the worker receives that message, it removes every `Call-Id` owned by that tab. This cleanup is not guaranteed for browser crashes, process kills, or other cases where page JavaScript cannot run.
 
 ## Requirements
 

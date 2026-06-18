@@ -47,12 +47,15 @@ class MySipClient extends EventEmitter implements SipClient {
 	releaseCallId(callId: string) {
 		this.port?.postMessage({ type: "releaseCallId", callId });
 	}
-	async dispose() {
+	disconnect() {
 		if (!this.port) return;
 		this.port.postMessage({ type: "disconnect" });
 		this.port.removeEventListener("message", this.handleMessage);
 		this.port.close();
 		this.port = null;
+	}
+	async dispose() {
+		this.disconnect();
 	}
 	private handleMessage = (event: MessageEvent) => {
 		if (
@@ -130,12 +133,17 @@ export default function App() {
 			callSession.dispose();
 			rerender();
 		};
+		const handlePageHide = (event: PageTransitionEvent) => {
+			if (!event.persisted) sipClient.disconnect();
+		};
 
 		webPhone.on("inboundCall", handleInboundCall);
 		webPhone.on("outboundCall", handleOutboundCall);
 		sipClient.on("callClaimed", handleCallClaimed);
+		window.addEventListener("pagehide", handlePageHide);
 		void webPhone.start();
 		return () => {
+			window.removeEventListener("pagehide", handlePageHide);
 			webPhone.off("inboundCall", handleInboundCall);
 			webPhone.off("outboundCall", handleOutboundCall);
 			sipClient.off("callClaimed", handleCallClaimed);
