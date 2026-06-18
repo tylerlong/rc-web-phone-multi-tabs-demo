@@ -102,17 +102,16 @@ export default function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
 	const [, rerender] = useReducer((count) => count + 1, 0);
 
-	const watchCallSession = (callSession: CallSession) => {
-		if (watchedCallSessions.has(callSession)) return;
-		watchedCallSessions.add(callSession);
-
-		callSession.on("ringing", rerender);
-		callSession.on("answered", rerender);
-		callSession.on("failed", rerender);
-		callSession.once("disposed", rerender);
-	};
-
 	useEffect(() => {
+		const watchCallSession = (callSession: CallSession) => {
+			if (watchedCallSessions.has(callSession)) return;
+			watchedCallSessions.add(callSession);
+
+			callSession.on("ringing", rerender);
+			callSession.on("answered", rerender);
+			callSession.on("failed", rerender);
+			callSession.once("disposed", rerender);
+		};
 		const handleInboundCall = (callSession: InboundCallSession) => {
 			watchCallSession(callSession);
 			rerender();
