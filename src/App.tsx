@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import WebPhone from "ringcentral-web-phone";
 import type InboundCallSession from "ringcentral-web-phone/call-session/inbound";
+import type CallSession from "ringcentral-web-phone/call-session/index";
 import EventEmitter from "ringcentral-web-phone/event-emitter";
 import type InboundMessage from "ringcentral-web-phone/sip-message/inbound";
 import type RequestMessage from "ringcentral-web-phone/sip-message/outbound/request";
@@ -9,6 +10,13 @@ import type { SipClient } from "ringcentral-web-phone/types";
 
 const cseqId = (message: { headers: Record<string, string> }) =>
 	message.headers.CSeq.trim().split(/\s+/)[0];
+
+type CallClaimedMessage = { type: "callClaimed"; callId: string };
+
+const isCallClaimedMessage = (data: unknown): data is CallClaimedMessage =>
+	typeof data === "object" &&
+	data !== null &&
+	(data as { type?: unknown }).type === "callClaimed";
 
 class MySipClient extends EventEmitter implements SipClient {
 	private port: MessagePort | null = null;
@@ -39,6 +47,12 @@ class MySipClient extends EventEmitter implements SipClient {
 	async reply(message: ResponseMessage) {
 		this.port?.postMessage(message.toString());
 	}
+	associateCallId(callId: string) {
+		this.port?.postMessage({ type: "associateCallId", callId });
+	}
+	releaseCallId(callId: string) {
+		this.port?.postMessage({ type: "releaseCallId", callId });
+	}
 	async dispose() {
 		if (!this.port) return;
 		this.port.postMessage({ type: "disconnect" });
@@ -47,14 +61,25 @@ class MySipClient extends EventEmitter implements SipClient {
 		this.port = null;
 	}
 	private handleMessage = (event: MessageEvent) => {
+		if (isCallClaimedMessage(event.data)) {
+			this.emit("callClaimed", event.data.callId);
+			return;
+		}
 		this.emit("inboundMessage", event.data as InboundMessage);
 	};
 }
 
+const sipClient = new MySipClient();
 const webPhone = new WebPhone({
-	sipClient: new MySipClient(),
+	sipClient,
 	sipInfo: JSON.parse(import.meta.env.VITE_SIP_INFO),
 });
+
+const trackOwnedCall = (callSession: CallSession) => {
+	const { callId } = callSession;
+	sipClient.associateCallId(callId);
+	callSession.once("disposed", () => sipClient.releaseCallId(callId));
+};
 
 export default function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
@@ -66,11 +91,20 @@ export default function App() {
 		const handleInboundCall = (callSession: InboundCallSession) => {
 			setInboundCall(callSession);
 		};
+		const handleCallClaimed = (callId: string) => {
+			setInboundCall((callSession) =>
+				callSession?.callId === callId ? null : callSession,
+			);
+		};
 
 		webPhone.on("inboundCall", handleInboundCall);
-		webPhone.start();
+		webPhone.on("outboundCall", trackOwnedCall);
+		sipClient.on("callClaimed", handleCallClaimed);
+		void webPhone.start();
 		return () => {
 			webPhone.off("inboundCall", handleInboundCall);
+			webPhone.off("outboundCall", trackOwnedCall);
+			sipClient.off("callClaimed", handleCallClaimed);
 			webPhone.dispose();
 		};
 	}, []);
@@ -83,8 +117,9 @@ export default function App() {
 
 	const handleAnswer = async () => {
 		if (!inboundCall) return;
-		await inboundCall.answer();
+		trackOwnedCall(inboundCall);
 		setInboundCall(null);
+		await inboundCall.answer();
 	};
 
 	return (

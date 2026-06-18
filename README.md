@@ -9,7 +9,7 @@ The key idea is that browser tabs share one `SharedWorker`. The worker owns the 
 - Starts a `ringcentral-web-phone` instance in the React app.
 - Replaces the default SIP client with a custom client that sends SIP messages to a `SharedWorker`.
 - Keeps one `DefaultSipClient` inside the shared worker.
-- Broadcasts inbound SIP messages from the worker back to all connected tabs.
+- Broadcasts unclaimed inbound SIP messages, then routes claimed calls by `Call-Id` to the owning tab.
 - Lets a tab place an outbound call by phone number.
 - Shows an `Answer` button when an inbound call is received.
 
@@ -24,13 +24,16 @@ This is a demo, not a complete softphone UI. It focuses on the multi-tab SIP con
 - `start()` connects the tab to `src/shared-worker.ts`.
 - `request()` posts an outbound SIP request to the worker and waits for the matching non-100 response by `CSeq`.
 - `reply()` posts SIP responses to the worker.
+- `associateCallId()` tells the worker that a call now belongs to this tab.
+- `releaseCallId()` clears that ownership when the call session is disposed.
 - `dispose()` disconnects the tab from the worker.
 
 `src/shared-worker.ts` creates one `DefaultSipClient`:
 
 - Every connected tab is stored in a `Set<MessagePort>`.
 - Messages from a tab are sent to the SIP server.
-- Inbound SIP messages from the server are posted to every connected tab.
+- Inbound SIP messages without a claimed `Call-Id` are posted to every connected tab.
+- Inbound SIP messages with a claimed `Call-Id` are posted only to the owning tab.
 - A tab can send `{ "type": "disconnect" }` to remove its port.
 
 ## Requirements
