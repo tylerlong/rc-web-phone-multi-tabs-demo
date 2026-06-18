@@ -11,7 +11,7 @@ The key idea is that browser tabs share one `SharedWorker`. The worker owns the 
 - Keeps one `DefaultSipClient` inside the shared worker.
 - Broadcasts unclaimed inbound SIP messages, then routes claimed calls by `Call-Id` to the owning tab.
 - Lets a tab place an outbound call by phone number.
-- Shows an `Answer` button when an inbound call is received.
+- Shows all current calls in the tab with basic answer, decline, cancel, and hangup controls.
 
 This is a demo, not a complete softphone UI. It focuses on the multi-tab SIP connection pattern.
 
@@ -34,6 +34,7 @@ This is a demo, not a complete softphone UI. It focuses on the multi-tab SIP con
 - Messages from a tab are sent to the SIP server.
 - Inbound SIP messages without a claimed `Call-Id` are posted to every connected tab.
 - Inbound SIP messages with a claimed `Call-Id` are posted only to the owning tab.
+- A tab can own multiple calls at once because ownership is tracked per `Call-Id`.
 - A tab can send `{ "type": "disconnect" }` to remove its port.
 
 ## Requirements
@@ -67,7 +68,7 @@ Start the dev server:
 pnpm dev
 ```
 
-Open the app in more than one browser tab. Each tab should connect to the same shared worker.
+Open the app in more than one browser tab. Each tab should connect to the same shared worker. Unclaimed inbound calls ring in every tab until one tab answers or declines them.
 
 
 ## Important Files

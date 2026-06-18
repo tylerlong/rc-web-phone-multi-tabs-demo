@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import WebPhone from "ringcentral-web-phone";
 import type InboundCallSession from "ringcentral-web-phone/call-session/inbound";
 import type CallSession from "ringcentral-web-phone/call-session/index";
+import type OutboundCallSession from "ringcentral-web-phone/call-session/outbound";
 import EventEmitter from "ringcentral-web-phone/event-emitter";
 import type InboundMessage from "ringcentral-web-phone/sip-message/inbound";
 import type RequestMessage from "ringcentral-web-phone/sip-message/outbound/request";
@@ -10,6 +11,19 @@ import type { SipClient } from "ringcentral-web-phone/types";
 
 const cseqId = (message: { headers: Record<string, string> }) =>
 	message.headers.CSeq.trim().split(/\s+/)[0];
+
+const callDirectionLabels: Record<CallSession["direction"], string> = {
+	inbound: "Inbound",
+	outbound: "Outbound",
+};
+
+const callStatusLabels: Record<CallSession["state"], string> = {
+	init: "Dialing",
+	ringing: "Ringing",
+	answered: "Answered",
+	disposed: "Disposed",
+	failed: "Failed",
+};
 
 type CallClaimedMessage = { type: "callClaimed"; callId: string };
 
@@ -75,35 +89,93 @@ const webPhone = new WebPhone({
 	sipInfo: JSON.parse(import.meta.env.VITE_SIP_INFO),
 });
 
-const trackOwnedCall = (callSession: CallSession) => {
+const ownedCallIds = new Set<string>();
+const watchedCallSessions = new WeakSet<CallSession>();
+
+const claimCallSession = (callSession: CallSession) => {
 	const { callId } = callSession;
+	if (ownedCallIds.has(callId)) return;
+	ownedCallIds.add(callId);
 	sipClient.associateCallId(callId);
-	callSession.once("disposed", () => sipClient.releaseCallId(callId));
+	callSession.once("disposed", () => {
+		ownedCallIds.delete(callId);
+		sipClient.releaseCallId(callId);
+	});
 };
+
+const isInboundCall = (
+	callSession: CallSession,
+): callSession is InboundCallSession => callSession.direction === "inbound";
+
+const isOutboundCall = (
+	callSession: CallSession,
+): callSession is OutboundCallSession => callSession.direction === "outbound";
 
 export default function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
-	const [inboundCall, setInboundCall] = useState<InboundCallSession | null>(
-		null,
-	);
+	const [callSessions, setCallSessions] = useState<CallSession[]>([]);
 
-	useEffect(() => {
-		const handleInboundCall = (callSession: InboundCallSession) => {
-			setInboundCall(callSession);
-		};
-		const handleCallClaimed = (callId: string) => {
-			setInboundCall((callSession) =>
-				callSession?.callId === callId ? null : callSession,
+	const removeCallSession = (callId: string) => {
+		setCallSessions((callSessions) =>
+			callSessions.filter((callSession) => callSession.callId !== callId),
+		);
+	};
+
+	const addCallSession = (callSession: CallSession) => {
+		setCallSessions((callSessions) =>
+			callSessions.some(({ callId }) => callId === callSession.callId)
+				? callSessions
+				: [...callSessions, callSession],
+		);
+	};
+
+	const watchCallSession = (callSession: CallSession) => {
+		if (watchedCallSessions.has(callSession)) return;
+		watchedCallSessions.add(callSession);
+
+		const rerender = () => {
+			setCallSessions((callSessions) =>
+				callSessions.some(({ callId }) => callId === callSession.callId)
+					? [...callSessions]
+					: callSessions,
 			);
 		};
 
+		callSession.on("ringing", rerender);
+		callSession.on("answered", rerender);
+		callSession.on("failed", rerender);
+		callSession.once("disposed", () => removeCallSession(callSession.callId));
+	};
+
+	useEffect(() => {
+		const handleInboundCall = (callSession: InboundCallSession) => {
+			watchCallSession(callSession);
+			addCallSession(callSession);
+		};
+		const handleOutboundCall = (callSession: OutboundCallSession) => {
+			claimCallSession(callSession);
+			watchCallSession(callSession);
+			addCallSession(callSession);
+		};
+		const handleCallClaimed = (callId: string) => {
+			if (ownedCallIds.has(callId)) return;
+			removeCallSession(callId);
+
+			const index = webPhone.callSessions.findIndex(
+				(callSession) => callSession.callId === callId,
+			);
+			if (index === -1) return;
+			const [callSession] = webPhone.callSessions.splice(index, 1);
+			callSession.dispose();
+		};
+
 		webPhone.on("inboundCall", handleInboundCall);
-		webPhone.on("outboundCall", trackOwnedCall);
+		webPhone.on("outboundCall", handleOutboundCall);
 		sipClient.on("callClaimed", handleCallClaimed);
 		void webPhone.start();
 		return () => {
 			webPhone.off("inboundCall", handleInboundCall);
-			webPhone.off("outboundCall", trackOwnedCall);
+			webPhone.off("outboundCall", handleOutboundCall);
 			sipClient.off("callClaimed", handleCallClaimed);
 			webPhone.dispose();
 		};
@@ -112,14 +184,25 @@ export default function App() {
 	const phoneNumberToCall = phoneNumber.trim();
 	const handleCall = () => {
 		if (!phoneNumberToCall) return;
-		webPhone.call(phoneNumberToCall);
+		void webPhone.call(phoneNumberToCall);
 	};
 
-	const handleAnswer = async () => {
-		if (!inboundCall) return;
-		trackOwnedCall(inboundCall);
-		setInboundCall(null);
-		await inboundCall.answer();
+	const handleAnswer = (callSession: InboundCallSession) => {
+		claimCallSession(callSession);
+		void callSession.answer().catch(console.error);
+	};
+
+	const handleDecline = (callSession: InboundCallSession) => {
+		claimCallSession(callSession);
+		void callSession.decline().catch(console.error);
+	};
+
+	const handleCancel = (callSession: OutboundCallSession) => {
+		void callSession.cancel().catch(console.error);
+	};
+
+	const handleHangup = (callSession: CallSession) => {
+		void callSession.hangup().catch(console.error);
 	};
 
 	return (
@@ -154,18 +237,69 @@ export default function App() {
 					</button>
 				</div>
 
-				{inboundCall && (
+				{callSessions.length > 0 && (
 					<div className="mt-8 border-zinc-200 border-t pt-5">
-						<p className="mb-3 font-medium text-sm text-zinc-700">
-							Incoming call
-						</p>
-						<button
-							className="rounded-md border border-emerald-600 px-4 py-2 font-medium text-emerald-700 text-sm hover:bg-emerald-50"
-							type="button"
-							onClick={handleAnswer}
-						>
-							Answer
-						</button>
+						<p className="mb-3 font-medium text-sm text-zinc-700">Calls</p>
+						<div className="space-y-3">
+							{callSessions.map((callSession) => (
+								<div
+									className="rounded-md border border-zinc-200 p-3"
+									key={callSession.callId}
+								>
+									<div className="flex items-start justify-between gap-3">
+										<div className="min-w-0">
+											<p className="truncate font-medium text-sm">
+												{callSession.remoteNumber || "Unknown number"}
+											</p>
+											<p className="mt-1 text-xs text-zinc-500">
+												{callDirectionLabels[callSession.direction]} ·{" "}
+												{callStatusLabels[callSession.state]}
+											</p>
+										</div>
+										<div className="flex shrink-0 flex-wrap justify-end gap-2">
+											{isInboundCall(callSession) &&
+												callSession.state === "ringing" && (
+													<>
+														<button
+															className="rounded-md border border-emerald-600 px-3 py-1.5 font-medium text-emerald-700 text-sm hover:bg-emerald-50"
+															type="button"
+															onClick={() => handleAnswer(callSession)}
+														>
+															Answer
+														</button>
+														<button
+															className="rounded-md border border-zinc-300 px-3 py-1.5 font-medium text-sm text-zinc-700 hover:bg-zinc-50"
+															type="button"
+															onClick={() => handleDecline(callSession)}
+														>
+															Decline
+														</button>
+													</>
+												)}
+											{isOutboundCall(callSession) &&
+												callSession.state === "ringing" && (
+													<button
+														className="rounded-md border border-zinc-300 px-3 py-1.5 font-medium text-sm text-zinc-700 hover:bg-zinc-50"
+														type="button"
+														onClick={() => handleCancel(callSession)}
+													>
+														Cancel
+													</button>
+												)}
+											{callSession.state === "answered" && (
+												<button
+													className="rounded-md border border-red-300 px-3 py-1.5 font-medium text-red-700 text-sm hover:bg-red-50"
+													type="button"
+													onClick={() => handleHangup(callSession)}
+												>
+													Hang up
+												</button>
+											)}
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
 					</div>
 				)}
 			</section>
