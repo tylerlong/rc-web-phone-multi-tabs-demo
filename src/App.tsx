@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import WebPhone from "ringcentral-web-phone";
 import type InboundCallSession from "ringcentral-web-phone/call-session/inbound";
 import type CallSession from "ringcentral-web-phone/call-session/index";
@@ -11,26 +11,6 @@ import type { SipClient } from "ringcentral-web-phone/types";
 
 const cseqId = (message: { headers: Record<string, string> }) =>
 	message.headers.CSeq.trim().split(/\s+/)[0];
-
-const callDirectionLabels: Record<CallSession["direction"], string> = {
-	inbound: "Inbound",
-	outbound: "Outbound",
-};
-
-const callStatusLabels: Record<CallSession["state"], string> = {
-	init: "Dialing",
-	ringing: "Ringing",
-	answered: "Answered",
-	disposed: "Disposed",
-	failed: "Failed",
-};
-
-type CallClaimedMessage = { type: "callClaimed"; callId: string };
-
-const isCallClaimedMessage = (data: unknown): data is CallClaimedMessage =>
-	typeof data === "object" &&
-	data !== null &&
-	(data as { type?: unknown }).type === "callClaimed";
 
 class MySipClient extends EventEmitter implements SipClient {
 	private port: MessagePort | null = null;
@@ -75,8 +55,12 @@ class MySipClient extends EventEmitter implements SipClient {
 		this.port = null;
 	}
 	private handleMessage = (event: MessageEvent) => {
-		if (isCallClaimedMessage(event.data)) {
-			this.emit("callClaimed", event.data.callId);
+		if (
+			typeof event.data === "object" &&
+			event.data !== null &&
+			(event.data as { type?: unknown }).type === "callClaimed"
+		) {
+			this.emit("callClaimed", (event.data as { callId: string }).callId);
 			return;
 		}
 		this.emit("inboundMessage", event.data as InboundMessage);
@@ -113,53 +97,30 @@ const isOutboundCall = (
 
 export default function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
-	const [callSessions, setCallSessions] = useState<CallSession[]>([]);
-
-	const removeCallSession = (callId: string) => {
-		setCallSessions((callSessions) =>
-			callSessions.filter((callSession) => callSession.callId !== callId),
-		);
-	};
-
-	const addCallSession = (callSession: CallSession) => {
-		setCallSessions((callSessions) =>
-			callSessions.some(({ callId }) => callId === callSession.callId)
-				? callSessions
-				: [...callSessions, callSession],
-		);
-	};
+	const [, rerender] = useReducer((count) => count + 1, 0);
 
 	const watchCallSession = (callSession: CallSession) => {
 		if (watchedCallSessions.has(callSession)) return;
 		watchedCallSessions.add(callSession);
 
-		const rerender = () => {
-			setCallSessions((callSessions) =>
-				callSessions.some(({ callId }) => callId === callSession.callId)
-					? [...callSessions]
-					: callSessions,
-			);
-		};
-
 		callSession.on("ringing", rerender);
 		callSession.on("answered", rerender);
 		callSession.on("failed", rerender);
-		callSession.once("disposed", () => removeCallSession(callSession.callId));
+		callSession.once("disposed", rerender);
 	};
 
 	useEffect(() => {
 		const handleInboundCall = (callSession: InboundCallSession) => {
 			watchCallSession(callSession);
-			addCallSession(callSession);
+			rerender();
 		};
 		const handleOutboundCall = (callSession: OutboundCallSession) => {
 			claimCallSession(callSession);
 			watchCallSession(callSession);
-			addCallSession(callSession);
+			rerender();
 		};
 		const handleCallClaimed = (callId: string) => {
 			if (ownedCallIds.has(callId)) return;
-			removeCallSession(callId);
 
 			const index = webPhone.callSessions.findIndex(
 				(callSession) => callSession.callId === callId,
@@ -167,6 +128,7 @@ export default function App() {
 			if (index === -1) return;
 			const [callSession] = webPhone.callSessions.splice(index, 1);
 			callSession.dispose();
+			rerender();
 		};
 
 		webPhone.on("inboundCall", handleInboundCall);
@@ -182,6 +144,9 @@ export default function App() {
 	}, []);
 
 	const phoneNumberToCall = phoneNumber.trim();
+	const callSessions = webPhone.callSessions.filter(
+		(callSession) => callSession.state !== "disposed",
+	);
 	const handleCall = () => {
 		if (!phoneNumberToCall) return;
 		void webPhone.call(phoneNumberToCall);
@@ -252,8 +217,10 @@ export default function App() {
 												{callSession.remoteNumber || "Unknown number"}
 											</p>
 											<p className="mt-1 text-xs text-zinc-500">
-												{callDirectionLabels[callSession.direction]} ·{" "}
-												{callStatusLabels[callSession.state]}
+												{callSession.direction} ·{" "}
+												{callSession.state === "init"
+													? "dialing"
+													: callSession.state}
 											</p>
 										</div>
 										<div className="flex shrink-0 flex-wrap justify-end gap-2">

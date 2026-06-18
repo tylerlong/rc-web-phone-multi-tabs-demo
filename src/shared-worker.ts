@@ -36,11 +36,7 @@ const releaseCallId = (port: MessagePort, callId: string) => {
 
 const routeInboundMessage = (message: InboundMessage) => {
 	const owner = callOwners.get(message.headers["Call-Id"]);
-	if (owner) {
-		owner.postMessage(message);
-		return;
-	}
-	for (const client of ports) {
+	for (const client of owner ? [owner] : ports) {
 		client.postMessage(message);
 	}
 };
